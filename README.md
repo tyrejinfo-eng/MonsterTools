@@ -878,3 +878,167 @@ curl -X POST http://localhost:8080/api/tools/execute \
   -d '{"Prompt": "Run a compilation build check", "WorkspacePath": ""}'
 
 Confirm that the tool returns a JSON block explicitly mapping your intentional syntax bug line number.
+
+Let us implement a Multi-File Search Tool inside your C# MonsterTools engine.Adding this capability means that when you ask Copilot, "Where do we handle authentication?" or "Search the project for the user configuration model", your C# backend will scan the text contents of every valid code file across your entire workspace. It uses high-speed parallel processing to find specific strings or keywords, extracts the matching lines along with their corresponding line numbers, and packages them into a clean, minimal context block for your local model.Implementation: The C# Multi-File Search EngineUpdate your ToolsController.cs inside your MonsterTools repository to integrate this multi-file parallel text scanning framework.
+
+// MonsterTools: Controllers/ToolsController.cs
+using Microsoft.AspNetCore.Mvc;
+using MonsterTools.Models;
+using System;
+using System.Collections.Concurrent;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+
+namespace MonsterTools.Controllers
+{
+    [ApiController]
+    [Route("api/tools")]
+    public class ToolsController : ControllerBase
+    {
+        // Extracts search terms wrapped in quotes or following intent keywords (e.g., search for "UserRepository" or find Auth)
+        private static readonly Regex SearchIntentRegex = new Regex(
+            @"\b(?:search|find|grep|locate)\b(?:\s+(?:for|in))?\s+[""']?([a-zA-Z0-9_\-\.]+)(?:[""']?)",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled
+        );
+
+        // Scan only relevant code and configuration assets to keep operations lightning fast
+        private static readonly string[] AllowedExtensions = new[] 
+        { 
+            ".cs", ".json", ".js", ".ts", ".tsx", ".py", ".md", ".html", ".css", ".yaml", ".yml" 
+        };
+
+        private static readonly string[] ExcludedDirectories = new[] 
+        { 
+            "bin", "obj", ".git", ".vs", "node_modules", "dist", "out", ".metadata" 
+        };
+
+        [HttpPost("execute")]
+        public IActionResult ExecuteTool([FromBody] ToolRequest request)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.Prompt))
+            {
+                return BadRequest(new { result = "Error: Invalid request payload." });
+            }
+
+            string baseWorkspace = string.IsNullOrWhiteSpace(request.WorkspacePath) 
+                ? Directory.GetCurrentDirectory() 
+                : request.WorkspacePath;
+
+            // 1. Process Intent Tracking via Regex
+            Match match = SearchIntentRegex.Match(request.Prompt);
+            if (!match.Success)
+            {
+                return Ok(new { result = "[MonsterTools Multi-Search]: No explicit text search targets detected in the command." });
+            }
+
+            string searchTerm = match.Groups[1].Value;
+            if (string.IsNullOrWhiteSpace(searchTerm) || searchTerm.Length < 3)
+            {
+                return Ok(new { result = "[MonsterTools Multi-Search Warning]: Search term must be at least 3 characters long to prevent performance spikes." });
+            }
+
+            // 2. Deep Project Workspace Scan & Match Extraction
+            string searchResults = ExecuteParallelWorkspaceSearch(baseWorkspace, searchTerm);
+            return Ok(new { result = searchResults });
+        }
+
+        private string ExecuteParallelWorkspaceSearch(string workspacePath, string searchTerm)
+        {
+            try
+            {
+                if (!Directory.Exists(workspacePath))
+                {
+                    return \$"[MonsterTools Multi-Search Error]: Target workspace directory does not exist: {workspacePath}";
+                }
+
+                // Gather all prospective text files while cleanly honoring excluded path rules
+                var filesToScan = Directory.EnumerateFiles(workspacePath, "*.*", SearchOption.AllDirectories)
+                    .Where(file => AllowedExtensions.Contains(Path.GetExtension(file).ToLower()))
+                    .Where(file => !ExcludedDirectories.Any(ex => file.Contains(\$"{Path.DirectorySeparatorChar}{ex}{Path.DirectorySeparatorChar}") 
+                                                                || file.StartsWith(Path.Combine(workspacePath, ex))));
+
+                // Concurrent bag to store results thread-safely across worker cores
+                var matchCollection = new ConcurrentBag<string>();
+                int totalMatchesCount = 0;
+
+                // Execute a multi-threaded parallel lookup loop
+                Parallel.ForEach(filesToScan, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, file =>
+                {
+                    try
+                    {
+                        // Performance optimization: Read lines iteratively instead of loading massive text objects into memory
+                        int lineNumber = 0;
+                        var fileMatches = new StringBuilder();
+                        bool fileHasMatches = false;
+
+                        foreach (var line in System.IO.File.ReadLines(file, Encoding.UTF8))
+                        {
+                            lineNumber++;
+                            if (line.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+                            {
+                                fileHasMatches = true;
+                                if (System.Threading.Interlocked.Increment(ref totalMatchesCount) <= 30) // Cap results safety ceiling
+                                {
+                                    fileMatches.AppendLine(\$"  Line {lineNumber}: {line.Trim()}");
+                                }
+                            }
+                        }
+
+                        if (fileHasMatches)
+                        {
+                            string relativePath = Path.GetRelativePath(workspacePath, file);
+                            var resultBlock = \$"File: {relativePath}\n{fileMatches}";
+                            matchCollection.Add(resultBlock);
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        // Silently ignore isolated file lock read errors
+                    }
+                });
+
+                if (matchCollection.IsEmpty)
+                {
+                    return \$"[MonsterTools Multi-Search]: Completed lookup. Found 0 occurrences of keyword reference '{searchTerm}' in the project workspace tree.";
+                }
+
+                // 3. Assemble and Structurally Package the Search Result Context Payload
+                var payloadBuilder = new StringBuilder();
+                payloadBuilder.AppendLine(\$"[MonsterTools Multi-File Search Context Injected]");
+                payloadBuilder.AppendLine(\$"Search Target Keyword: '{searchTerm}'");
+                payloadBuilder.AppendLine(\$"Total Occurrences Found: {totalMatchesCount}\n");
+                payloadBuilder.AppendLine("```text");
+
+                foreach (var matchBlock in matchCollection.Take(10)) // Limit displaying to the top 10 matching files for token window safety
+                {
+                    payloadBuilder.AppendLine(matchBlock);
+                }
+
+                if (matchCollection.Count > 10)
+                {
+                    payloadBuilder.AppendLine(\$"... and {matchCollection.Count - 10} additional files containing matching text lines were omitted to preserve context space.");
+                }
+
+                payloadBuilder.AppendLine("```");
+                return payloadBuilder.ToString();
+            }
+            catch (Exception ex)
+            {
+                return $"[MonsterTools Multi-Search Error]: Global scanning thread pool failure. Details: {ex.Message}";
+            }
+        }
+    }
+}
+How the Combined Search Flow Operates copilot-proxy-tools handles the payload and forwards the prompt string directly to the local C# web engine.Your C# engine flags the intent term "search" and extracts the specific substring "ToolRequest".It maps out your workspace tree, spins up a lightning-fast parallel thread pool, skips build directories like /bin/ or /obj/, and checks every single code file on your machine.It extracts matching references along with their file paths and exact line positions:textFile: Models/ToolRequest.cs
+  Line 4: public class ToolRequest
+File: Controllers/ToolsController.cs
+  Line 22: public IActionResult ExecuteTool([FromBody] ToolRequest request)
+Use code with caution.This compiled log gets formatted directly into Markdown code boxes and returned to your Node.js proxy, allowing ibm/granite-4-h-tiny to accurately cross-reference your structural dependencies immediately.Terminal Verification CheckTo guarantee your workspace search algorithm is tracing files flawlessly:Spin up your C# web stack locally:bashdotnet run --urls "http://localhost:8080"
+Use code with caution.Open your shell console terminal window and fire a mock string scan:bashcurl -X POST http://localhost:8080/api/tools/execute \
+  -H "Content-Type: application/json" \
+  -d '{"Prompt": "Search for execute", "WorkspacePath": ""}'
+Use code with caution.
+When you type inside VS Code: "Search the project for 'ToolRequest'"copilot-proxy-tools handles the payload and forwards the prompt string directly to the local C# web engine.Your C# engine flags the intent term "search" and extracts the specific substring "ToolRequest".It maps out your workspace tree, spins up a lightning-fast parallel thread pool, skips build directories like /bin/ or /obj/, and checks every single code file on your machine.It extracts matching references along with their file paths and exact line positions:
