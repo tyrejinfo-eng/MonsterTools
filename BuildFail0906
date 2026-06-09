@@ -1,0 +1,35 @@
+Windows PowerShell
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+Install the latest PowerShell for new features and improvements! https://aka.ms/PSWindows
+
+PS C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools> dotnet clean
+
+Build succeeded in 0,3s
+PS C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools> dotnet build
+Restore complete (0,2s)
+  MonsterTools net8.0 failed with 21 error(s) (0,2s)
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(90,1): error CS8803: Top-level statements must precede namespace and type declarations.
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(91,1): error CS0106: The modifier 'public' is not valid for this item
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(115,6): error CS1026: ) expected
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(115,6): error CS1002: ; expected
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(115,13): error CS1003: Syntax error, ',' expected
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(115,115): error CS1044: Cannot use more than one type in a for, using, fixed, or declaration statement
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(115,123): error CS1003: Syntax error, ',' expected
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(115,185): error CS1002: ; expected
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(115,185): error CS1022: Type or namespace definition, or end-of-file expected
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(115,198): error CS1003: Syntax error, ',' expected
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(115,263): error CS1002: ; expected
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(115,263): error CS1022: Type or namespace definition, or end-of-file expected
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(115,279): error CS1003: Syntax error, ',' expected
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(116,71): error CS1002: ; expected
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(116,91): error CS1002: ; expected
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(116,108): error CS1003: Syntax error, ',' expected
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(116,144): error CS1044: Cannot use more than one type in a for, using, fixed, or declaration statement
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(116,149): error CS1003: Syntax error, ',' expected
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(116,196): error CS1044: Cannot use more than one type in a for, using, fixed, or declaration statement
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(116,200): error CS1003: Syntax error, ',' expected
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(116,249): error CS1002: ; expected
+
+Build failed with 21 error(s) in 0,7s
+PS C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools>
