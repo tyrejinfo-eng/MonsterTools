@@ -1,0 +1,9 @@
+{
+  "listenPort": 4141,
+  "streamResponses": true,
+  "monsterToolsUrl": "http://localhost:8080",
+  "workspaceHeader": "x-workspace-root",
+  "timeoutSeconds": 300,
+  "offlineMode": true,
+  "logLevel": "Information"
+}
