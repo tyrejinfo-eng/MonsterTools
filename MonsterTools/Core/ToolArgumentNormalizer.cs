@@ -1,25 +1,33 @@
-using System;
 using System.Collections.Generic;
 
-namespace MonsterTools.Core;
-
-public static class ToolArgumentNormalizer
+namespace MonsterTools.Core
 {
-    public static Dictionary<string, object?> Normalize(string toolName, Dictionary<string, object?> args)
+    public class ToolArgumentNormalizer : IToolArgumentNormalizer
     {
-        var result = new Dictionary<string, object?>(args ?? new());
-
-        switch (toolName)
+        public Dictionary<string, object> Normalize(Dictionary<string, object>? sourceArguments)
         {
-            case "SearchWorker":
-                if (!result.ContainsKey("pattern") || result["pattern"] is null)
-                    result["pattern"] = "";
+            if (sourceArguments == null)
+            {
+                return new Dictionary<string, object>();
+            }
 
-                if (!result.ContainsKey("workspaceRoot") || result["workspaceRoot"] is null)
-                    result["workspaceRoot"] = Environment.CurrentDirectory;
-                break;
+            var cleanMap = new Dictionary<string, object>();
+            foreach (var kvp in sourceArguments)
+            {
+                if (kvp.Value == null) continue;
+                
+                // Strip unnecessary enclosing quotes often added by small models
+                if (kvp.Value is string stringValue)
+                {
+                    var cleanValue = stringValue.Trim('\"', '\'');
+                    cleanMap[kvp.Key] = cleanValue;
+                }
+                else
+                {
+                    cleanMap[kvp.Key] = kvp.Value;
+                }
+            }
+            return cleanMap;
         }
-
-        return result;
     }
 }
