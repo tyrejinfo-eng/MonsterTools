@@ -1,14 +1,15 @@
-namespace MonsterTools.Core;
-
-public class ToolResult
+namespace MonsterTools.Core
 {
-    public bool Success { get; set; }
-    public string Output { get; set; } = "";
-    public string Error { get; set; } = "";
+    public class ToolResult
+    {
+        public bool IsSuccess { get; set; }
+        public string Output { get; set; } = string.Empty;
+        public string ErrorMessage { get; set; } = string.Empty;
 
-    public static ToolResult Ok(string output)
-        => new() { Success = true, Output = output };
+        public static ToolResult Success(string output) => 
+            new() { IsSuccess = true, Output = output };
 
-    public static ToolResult Fail(string error)
-        => new() { Success = false, Error = error };
+        public static ToolResult Failure(string errorMessage) => 
+            new() { IsSuccess = false, ErrorMessage = errorMessage };
+    }
 }
