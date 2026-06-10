@@ -1,12 +1,22 @@
+using System.Threading;
+using System.Threading.Tasks;
 using System.Collections.Generic;
 
-namespace MonsterTools.Core
+namespace MonsterTools.Services
 {
-    /// <summary>
-    /// Normalises raw unformatted payload values sent from lower-compute local models.
-    /// </summary>
-    public interface IToolArgumentNormalizer
+    public interface ILMStudioService
     {
-        Dictionary<string, object> Normalize(Dictionary<string, object>? sourceArguments);
+        Task<string> QueryModelAsync(string prompt, double temperature = 0.2);
+        
+        /// <summary>
+        /// Executes a multi-turn chat history evaluation with the local model runtime.
+        /// </summary>
+        Task<string> QueryModelHistoryAsync(List<ChatMessageContext> conversationHistory, CancellationToken cancellationToken);
+    }
+
+    public class ChatMessageContext
+    {
+        public string Role { get; set; } = string.Empty;
+        public string Content { get; set; } = string.Empty;
     }
 }
