@@ -1,29 +1,11 @@
-namespace MonsterTools.Core;
+using System.Collections.Generic;
 
-public class ToolRequest
+namespace MonsterTools.Core
 {
-    public Dictionary<string, object?> Args { get; }
-
-    public ToolRequest(Dictionary<string, object?> args)
+    public class ToolRequest
     {
-        Args = args;
-    }
-
-    public T? Get<T>(string key)
-    {
-        if (!Args.TryGetValue(key, out var value) || value is null)
-            return default;
-
-        if (value is T t)
-            return t;
-
-        try
-        {
-            return (T)Convert.ChangeType(value, typeof(T));
-        }
-        catch
-        {
-            return default;
-        }
+        public string ToolName { get; set; } = string.Empty;
+        public Dictionary<string, object> Arguments { get; set; } = new();
+        public string ExecutionContextPath { get; set; } = string.Empty;
     }
 }
