@@ -1,3 +1,4 @@
+// MonsterTools/Services/LMStudioService.cs
 using System;
 using System.Net.Http;
 using System.Text;
@@ -8,31 +9,29 @@ namespace MonsterTools.Services
 {
     public class LMStudioService
     {
-        public string BaseUrl { get; }
-        public string ModelName { get; }
-        private readonly HttpClient _http;
+        private readonly HttpClient _networkClient;
+        private readonly string _targetModelEndpoint;
 
-        public LMStudioService(string baseUrl = "http://127.0.0.1:1234", string modelName = "ibm/granite-4-h-tiny")
+        // Injected client structure allows safe intercept testing and shared loopback contexts
+        public LMStudioService(HttpClient networkClient, string targetModelEndpoint = "http://127.0.0.1:1234")
         {
-            BaseUrl = baseUrl.TrimEnd('/');
-            ModelName = modelName;
-            _http = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
+            _networkClient = networkClient ?? throw new ArgumentNullException(nameof(networkClient));
+            _targetModelEndpoint = targetModelEndpoint;
         }
 
-        public async Task<string> GetCompletionAsync(string prompt)
+        public async Task<string> QueryModelAsync(string structuredPromptPayload)
         {
-            var requestBody = new
-            {
-                model = ModelName,
-                messages = new[] { new { role = "user", content = prompt } },
-                stream = false
-            };
+            var serializedContent = new StringContent(
+                JsonSerializer.Serialize(new { model = "ibm/granite-4-h-tiny", prompt = structuredPromptPayload }),
+                Encoding.UTF8,
+                "application/json"
+            );
 
-            var content = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json");
-            var response = await _http.PostAsync($"{BaseUrl}/chat/completions", content);
-            response.EnsureSuccessStatusCode();
+            // Re-use system connection contexts to prevent socket exhaustion bugs
+            var networkResponse = await _networkClient.PostAsync($"{_targetModelEndpoint}/v1/completions", serializedContent);
+            networkResponse.EnsureSuccessStatusCode();
 
-            return await response.Content.ReadAsStringAsync();
+            return await networkResponse.Content.ReadAsStringAsync();
         }
     }
 }
