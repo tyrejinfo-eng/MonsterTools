@@ -1,7 +1,14 @@
-namespace MonsterTools.Core;
+using System.Threading.Tasks;
 
-public interface IToolWorker
+namespace MonsterTools.Core
 {
-    string Name { get; }
-    ToolResult Run(ToolRequest request);
+    /// <summary>
+    /// Enforces structural execution mechanics across all system task workers.
+    /// </summary>
+    public interface IToolWorker
+    {
+        string Name { get; }
+        string Description { get; }
+        Task<ToolResult> ExecuteAsync(ToolRequest request);
+    }
 }
