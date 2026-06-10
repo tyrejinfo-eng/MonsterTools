@@ -1,78 +1,54 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { Readable } from 'stream';
-import { ChunkTransformer } from './ChunkTransformer.js';
+import { ChunkTransformer } from './ChunkTransformer';
 
+/**
+ * Orchestrates multi-turn token streaming delivery from our proxy core directly 
+ * to the connected VS Code extension UI interface.
+ */
 export class SseHandler {
-  /**
-   * Express route handler to stream LLM outputs from LM Studio to the client via SSE.
-   * @param getUpstreamStream A function that returns the raw Readable network stream from LM Studio/Upstream.
-   */
-  public static async handleStream(
-    req: Request,
-    res: Response,
-    getUpstreamStream: () => Promise<Readable>
-  ): Promise<void> {
-    // 1. Establish strict SSE headers required by the client/Copilot interface
-    res.writeHead(200, {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache, no-transform',
-      'Connection': 'keep-alive',
-      'X-Accel-Buffering': 'no' // Prevents reverse proxies like Nginx from buffering the stream
-    });
+    /**
+     * Safely attaches a streaming model response to an active Express client context.
+     */
+    public static streamResponseToClient(expressResponse: Response, incomingUpstreamNodeStream: Readable): void {
+        // Enforce the standard headers required for Server-Sent Events (SSE)
+        expressResponse.writeHead(200, {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'X-Accel-Buffering': 'no' // Prevents Nginx/edge proxies from buffering tokens
+        });
 
-    // Send initial flush to open the pipeline immediately
-    res.write(': ok\n\n');
+        const streamTransformer = new ChunkTransformer();
 
-    let transformer: ChunkTransformer | null = new ChunkTransformer();
-    let upstreamStream: Readable | null = null;
+        // Pipe the raw incoming data stream directly through our stateful transformer line-buffer
+        incomingUpstreamNodeStream.pipe(streamTransformer);
 
-    try {
-      // 2. Fetch the live connection stream from LM Studio
-      upstreamStream = await getUpstreamStream();
+        // Process buffered tokens as they finish parsing
+        streamTransformer.on('data', (payload: { done: boolean; data: any; raw: string }) => {
+            if (payload.raw) {
+                // Write the clean string directly out to the open IDE network socket
+                expressResponse.write(payload.raw);
+            }
+        });
 
-      // 3. Pipe raw buffer fragments through the transformer
-      upstreamStream.pipe(transformer);
+        streamTransformer.on('error', (streamError: Error) => {
+            console.error('Fatal crash intercepted within active stream transformer engine context:', streamError.message);
+            if (!expressResponse.headersSent) {
+                expressResponse.write('data: {"error": "Internal streaming transformation loop exception occurred."}\n\n');
+            }
+            expressResponse.end();
+        });
 
-      // 4. Read cleanly formatted objects from the transformer and emit them as pure SSE text chunks
-      transformer.on('data', (data: { done: boolean; content: string }) => {
-        if (data.done) {
-          res.write('data: [DONE]\n\n');
-          res.end();
-          return;
-        }
+        streamTransformer.on('end', () => {
+            // Safely close the network connection context once the stream completes
+            expressResponse.end();
+        });
 
-        // Construct standard SSE data package
-        res.write(`data: ${JSON.stringify({ content: data.content })}\n\n`);
-      });
-
-      // Handle downstream closure or parsing failures
-      transformer.on('error', (err) => {
-        res.write(`data: ${JSON.stringify({ error: 'Stream parsing failure occurred.' })}\n\n`);
-        res.end();
-      });
-
-      upstreamStream.on('error', (err) => {
-        res.write(`data: ${JSON.stringify({ error: 'Upstream connection dropped.' })}\n\n`);
-        res.end();
-      });
-
-    } catch (error: any) {
-      // Handle failures before the stream could successfully initialize
-      res.write(`data: ${JSON.stringify({ error: `Failed to initialize stream: ${error.message}` })}\n\n`);
-      res.end();
+        // Clean up resources if the developer cancels the request early inside VS Code
+        expressResponse.on('close', () => {
+            incomingUpstreamNodeStream.destroy();
+            streamTransformer.destroy();
+        });
     }
-
-    // 5. Clean up open descriptors instantly if the client disconnects or closes the tab
-    req.on('close', () => {
-      if (upstreamStream) {
-        upstreamStream.unpipe();
-        upstreamStream.destroy();
-      }
-      if (transformer) {
-        transformer.removeAllListeners();
-        transformer.destroy();
-        transformer = null;
-      }
-    });
-  }
 }
