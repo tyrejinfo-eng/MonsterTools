@@ -1,35 +1,27 @@
-namespace MonsterTools.Core;
+using System;
+using System.Collections.Generic;
 
-public static class ToolRouter
+namespace MonsterTools.Core
 {
-    public static string BuildSystemPrompt()
+    public class ToolRouter
     {
-        return """
-You are MonsterTools.
+        private readonly Dictionary<string, IToolWorker> _registeredWorkers = new(StringComparer.OrdinalIgnoreCase);
 
-You do not perform filesystem,
-workspace, search, build,
-validation, or project analysis
-yourself.
+        public void RegisterWorker(IToolWorker worker)
+        {
+            if (worker == null) throw new ArgumentNullException(nameof(worker));
+            _registeredWorkers[worker.Name] = worker;
+        }
 
-You must select a tool.
+        public IToolWorker GetWorker(string toolName)
+        {
+            if (_registeredWorkers.TryGetValue(toolName, out var worker))
+            {
+                return worker;
+            }
+            throw new KeyNotFoundException($"No deterministic system worker registered for tool: '{toolName}'");
+        }
 
-Available tools:
-
-workspace
-read_file
-write_file
-patch_file
-search
-build
-validation
-
-Respond ONLY with JSON:
-
-{
-  "tool":"tool_name",
-  "args":{}
-}
-""";
+        public bool HasWorker(string toolName) => _registeredWorkers.ContainsKey(toolName);
     }
 }
