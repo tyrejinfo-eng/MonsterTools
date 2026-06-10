@@ -1,15 +1,11 @@
 {
-  "proxy": {
-    "port": 3010,
-    "host": "localhost"
+  "server": {
+    "host": "127.0.0.1",
+    "port": 5005,
+    "environment": "development"
   },
-  "lmStudio": {
-    "baseUrl": "http://localhost:1234/v1",
-    "defaultModel": "ibm/granite-4-h-tiny",
-    "temperature": 0.0,
-    "stream": true
-  },
-  "monsterToolsEngine": {
-    "endpoint": "http://localhost:5000/api/agent"
+  "downstreamServices": {
+    "monsterToolsEngine": "http://127.0.0",
+    "lmStudioRuntime": "http://127.0.0"
   }
 }
