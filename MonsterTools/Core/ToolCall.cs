@@ -1,27 +1,25 @@
-using System.Text.Json;
+using System.Text.Json.Serialization;
 
-namespace MonsterTools.Core;
-
-public sealed class ToolCall
+namespace MonsterTools.Core
 {
-    public string tool { get; set; } = "";
-
-    public Dictionary<string, object?> args
-        { get; set; } = new();
-
-    public static ToolCall Parse(
-        string response)
+    public class ToolCall
     {
-        try
-        {
-            return JsonSerializer
-                .Deserialize<ToolCall>(
-                    response)
-                ?? new ToolCall();
-        }
-        catch
-        {
-            return new ToolCall();
-        }
+        [JsonPropertyName("id")]
+        public string Id { get; set; } = string.Empty;
+
+        [JsonPropertyName("type")]
+        public string Type { get; set; } = "function";
+
+        [JsonPropertyName("function")]
+        public ToolFunction Function { get; set; } = new();
+    }
+
+    public class ToolFunction
+    {
+        [JsonPropertyName("name")]
+        public string Name { get; set; } = string.Empty;
+
+        [JsonPropertyName("arguments")]
+        public string Arguments { get; set; } = "{}";
     }
 }
