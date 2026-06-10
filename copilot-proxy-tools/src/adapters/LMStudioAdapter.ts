@@ -1,130 +1,154 @@
-import { MonsterAgentRequest, MonsterAgentResponse } from '../integrations/MonsterToolsClient';
+import { Readable } from 'stream';
+import axios from 'axios';
 
-// Open-AI Standard Interfaces received from Layer 1 (VS Code Copilot UI)
-export interface OpenAiChatMessage {
-  role: 'system' | 'user' | 'assistant' | 'tool';
-  content: string | null;
-  name?: string;
-  tool_calls?: any[];
+interface OpenAiMessage {
+    role: 'system' | 'user' | 'assistant';
+    content: string;
 }
 
-export interface OpenAiChatCompletionRequest {
-  model: string;
-  messages: OpenAiChatMessage[];
-  temperature?: number;
-  top_p?: number;
-  stream?: boolean;
-  max_tokens?: number;
-  tools?: any[];
+interface OpenAiChatPayload {
+    model: string;
+    messages: OpenAiMessage[];
+    temperature?: number;
+    stream?: boolean;
 }
 
-export interface OpenAiChatCompletionResponse {
-  id: string;
-  object: 'chat.completion';
-  created: number;
-  model: string;
-  choices: {
-    index: number;
-    message: {
-      role: 'assistant';
-      content: string;
-    };
-    finish_reason: 'stop' | 'length' | 'tool_calls';
-  }[];
-  usage?: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-  };
+interface CsharpAgentRequest {
+    prompt: string;
+    targetModel: string;
+    arguments: Record<string, any>;
 }
 
+interface CsharpAgentResponse {
+    responseId: string;
+    rawOutput: string;
+    status: string;
+    timestamp: string;
+}
+
+/**
+ * Maps incoming IDE extension payloads to the downstream C# orchestration agent 
+ * and local inference runtimes.
+ */
 export class LMStudioAdapter {
-  
-  /**
-   * Transforms an incoming OpenAI payload into a flat context prompt tailored for 
-   * small local models, extracting tool parameters into a predictable, non-nested map.
-   */
-  public transformToMonsterRequest(openAiPayload: OpenAiChatCompletionRequest): MonsterAgentRequest {
-    if (!openAiPayload || !openAiPayload.messages || openAiPayload.messages.length === 0) {
-      throw new Error('[LMStudioAdapter] Cannot transform an empty or missing OpenAI message array.');
+    private readonly csharpEngineUrl: string;
+    private readonly lmStudioEndpoint: string;
+
+    constructor(
+        csharpEngineUrl: string = 'http://127.0.0',
+        lmStudioEndpoint: string = 'http://127.0.0'
+    ) {
+        this.csharpEngineUrl = csharpEngineUrl;
+        this.lmStudioEndpoint = lmStudioEndpoint;
     }
 
-    // Flatten message history into an optimized orchestrator prompt for low-compute models
-    const aggregatedPrompt = this.compileConversationContext(openAiPayload.messages);
-    
-    // Extract inference parameters safely into the C# Dictionary structure
-    const extractedArguments: Record<string, any> = {
-      temperature: openAiPayload.temperature ?? 0.2, // Default cool temperature for strict tool calling behavior
-      maxTokens: openAiPayload.max_tokens ?? 1024,
-      topP: openAiPayload.top_p ?? 0.95
-    };
-
-    // If tools are exposed from VS Code Copilot, attach their definitions as metadata hints
-    if (openAiPayload.tools && openAiPayload.tools.length > 0) {
-      extractedArguments['toolHints'] = JSON.stringify(openAiPayload.tools);
-    }
-
-    return {
-      prompt: aggregatedPrompt,
-      targetModel: openAiPayload.model || 'ibm/granite-4-h-tiny', // Strict alignment with CodebaseAudit1006 targets
-      arguments: extractedArguments
-    };
-  }
-
-  /**
-   * Transforms a structured C# backend execution completion packet back into an 
-   * OpenAI standard compliant format expected by the VS Code UI layer.
-   */
-  public transformToOpenAiResponse(
-    monsterResponse: MonsterAgentResponse, 
-    originalModel: string
-  ): OpenAiChatCompletionResponse {
-    return {
-      id: `chatcmpl-${monsterResponse.responseId}`,
-      object: 'chat.completion',
-      created: Math.floor(Date.now() / 1000),
-      model: originalModel,
-      choices: [
-        {
-          index: 0,
-          message: {
-            role: 'assistant',
-            content: monsterResponse.rawOutput
-          },
-          finish_reason: 'stop'
+    /**
+     * Transforms chat completion payloads and routes them through the C# agent loop or LM Studio.
+     */
+    public async transformAndRouteRequest(payload: OpenAiChatPayload): Promise<Readable> {
+        if (!payload.messages || payload.messages.length === 0) {
+            throw new Error('Malformed execution payload: Request message history is empty.');
         }
-      ],
-      usage: {
-        prompt_tokens: -1,     // Local runtime reporting abstraction
-        completion_tokens: -1,
-        total_tokens: -1
-      }
-    };
-  }
 
-  /**
-   * Helper utility that folds alternating context lists down into explicit systemic 
-   * blocks. This mitigates confusion inside low-compute contexts during long agent loops.
-   */
-  private compileConversationContext(messages: OpenAiChatMessage[]): string {
-    let contextBuilder = '';
+        // Extract the latest developer command from the message history
+        const latestUserMessage = [...payload.messages].reverse().find(msg => msg.role === 'user');
+        const corePrompt = latestUserMessage ? latestUserMessage.content : '';
 
-    for (const msg of messages) {
-      const roleMarker = msg.role.toUpperCase();
-      const contentText = msg.content || '';
-      
-      if (!contentText && msg.tool_calls) {
-        // If there's an implicit mid-stream tool loop instruction, stringify it into the model's history text
-        contextBuilder += `[CONTEXT - OUTBOUND TOOL_CALL]: ${JSON.stringify(msg.tool_calls)}\n`;
-        continue;
-      }
+        // Check if the prompt requires native execution tools like compilation or filesystem updates
+        const requiresDeterministicTools = /(build|compile|write file|generate file|create code|run project)/i.test(corePrompt);
 
-      contextBuilder += `[${roleMarker}]: ${contentText}\n`;
+        if (requiresDeterministicTools) {
+            return this.dispatchToCsharpOrchestrator(corePrompt, payload.model);
+        }
+
+        // Fall back to a standard streaming pass-through for conversational text requests
+        return this.dispatchDirectStreamToLmStudio(payload);
     }
 
-    // Append a deterministic trailing delimiter sequence to signal execution handoff to AgentLoop.cs
-    contextBuilder += `[SYSTEM DIRECTION]: Evaluate the workspace task using your local deterministic tool executors. Provide output.\n[ASSISTANT]:`;
-    
-    return contextBuilder;
-  }
+    /**
+     * Packages structural developer intents into an AgentRequestContext and executes the C# loop.
+     */
+    private async dispatchToCsharpOrchestrator(prompt: string, modelName: string): Promise<Readable> {
+        try {
+            const requestPayload: CsharpAgentRequest = {
+                prompt: prompt,
+                targetModel: modelName,
+                arguments: {
+                    workspaceRoot: process.cwd(),
+                    timestamp: new Date().toISOString()
+                }
+            };
+
+            // Post the structural request to the ASP.NET Minimal API endpoint
+            const response = await axios.post<CsharpAgentResponse>(this.csharpEngineUrl, requestPayload, {
+                headers: { 'Content-Type': 'application/json' },
+                timeout: 120000 // Match the 120s server timeout allocation
+            });
+
+            const agentOutputText = response.data.rawOutput || 'Task execution completed successfully with no returned logs.';
+            
+            // Format the static C# result block into a compliant OpenAI SSE token stream
+            return this.convertTextToSseStream(agentOutputText, modelName);
+        } catch (error: any) {
+            const errorMessage = error.response?.data?.error || error.message;
+            return this.convertTextToSseStream(`Error: The C# compilation orchestrator failed. Context: ${errorMessage}`, modelName);
+        }
+    }
+
+    /**
+     * Streams incoming tokens directly from the local inference engine back to the client proxy.
+     */
+    private async dispatchDirectStreamToLmStudio(payload: OpenAiChatPayload): Promise<Readable> {
+        const targetUrl = `${this.lmStudioEndpoint}/chat/completions`;
+        
+        const response = await axios.post(targetUrl, payload, {
+            responseType: 'stream',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        return response.data as Readable;
+    }
+
+    /**
+     * Formats a raw text block into an OpenAI-compliant Server-Sent Event (SSE) token stream.
+     */
+    private convertTextToSseStream(text: string, modelName: string): Readable {
+        const stream = new Readable({ read() {} });
+        const streamId = `chatcmpl-${Math.random().toString(36).substring(2, 11)}`;
+        
+        // Escape special characters to maintain clean JSON formatting in transit
+        const safeText = JSON.stringify(text).slice(1, -1);
+
+        const dataChunk = {
+            id: streamId,
+            object: 'chat.completion.chunk',
+            created: Math.floor(Date.now() / 1000),
+            model: modelName,
+            choices: [{
+                index: 0,
+                delta: { content: text },
+                finish_reason: null
+            }]
+        };
+
+        const stopChunk = {
+            id: streamId,
+            object: 'chat.completion.chunk',
+            created: Math.floor(Date.now() / 1000),
+            model: modelName,
+            choices: [{
+                index: 0,
+                delta: {},
+                finish_reason: 'stop'
+            }]
+        };
+
+        // Write standard OpenAI SSE protocol blocks out to the active transformer pipeline
+        stream.push(`data: ${JSON.stringify(dataChunk)}\n\n`);
+        stream.push(`data: ${JSON.stringify(stopChunk)}\n\n`);
+        stream.push('data: [DONE]\n\n');
+        stream.push(null); // Signal the end of the readable stream source
+
+        return stream;
+    }
 }
