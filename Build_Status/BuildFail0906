@@ -1,0 +1,370 @@
+Windows PowerShell
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+Install the latest PowerShell for new features and improvements! https://aka.ms/PSWindows
+
+PS C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools> dotnet clean
+
+Build succeeded in 0,3s
+PS C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools> dotnet build
+Restore complete (0,2s)
+  MonsterTools net8.0 failed with 21 error(s) (0,2s)
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(90,1): error CS8803: Top-level statements must precede namespace and type declarations.
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(91,1): error CS0106: The modifier 'public' is not valid for this item
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(115,6): error CS1026: ) expected
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(115,6): error CS1002: ; expected
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(115,13): error CS1003: Syntax error, ',' expected
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(115,115): error CS1044: Cannot use more than one type in a for, using, fixed, or declaration statement
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(115,123): error CS1003: Syntax error, ',' expected
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(115,185): error CS1002: ; expected
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(115,185): error CS1022: Type or namespace definition, or end-of-file expected
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(115,198): error CS1003: Syntax error, ',' expected
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(115,263): error CS1002: ; expected
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(115,263): error CS1022: Type or namespace definition, or end-of-file expected
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(115,279): error CS1003: Syntax error, ',' expected
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(116,71): error CS1002: ; expected
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(116,91): error CS1002: ; expected
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(116,108): error CS1003: Syntax error, ',' expected
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(116,144): error CS1044: Cannot use more than one type in a for, using, fixed, or declaration statement
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(116,149): error CS1003: Syntax error, ',' expected
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(116,196): error CS1044: Cannot use more than one type in a for, using, fixed, or declaration statement
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(116,200): error CS1003: Syntax error, ',' expected
+    C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools\MonsterTools.Tests\ToolExecutionEngineTest.cs(116,249): error CS1002: ; expected
+
+Build failed with 21 error(s) in 0,7s
+PS C:\Users\Ty\Documents\GitHub\SGL MonsterTools_Proxy\MonsterTools>
+
+
+Gpt reason - 
+This is exactly why your build is failing.
+
+The errors are not in MonsterTools itself. They are in the test file you pasted.
+
+The compiler is complaining:
+
+error CS8803: Top-level statements must precede namespace and type declarations.
+error CS0106: The modifier 'public' is not valid for this item
+
+because you have this:
+
+namespace MonsterTools.Tests
+{
+    public class ToolExecutionEngineTests
+    {
+        ...
+    }
+}
+
+[Fact]
+public async Task LMStudioService_WithMockedClient_ParsesSimulatedResponseText()
+{
+    ...
+}
+
+That [Fact] method is OUTSIDE any class.
+
+In C# you cannot place a test method floating in the file after a namespace/class block.
+
+
+---
+
+First Problem
+
+This section:
+
+[Fact]
+public async Task LMStudioService_WithMockedClient_ParsesSimulatedResponseText()
+{
+    ...
+}
+
+must be moved inside a test class:
+
+namespace MonsterTools.Tests
+{
+    public class LMStudioServiceTests
+    {
+        [Fact]
+        public async Task LMStudioService_WithMockedClient_ParsesSimulatedResponseText()
+        {
+            ...
+        }
+    }
+}
+
+That alone will eliminate:
+
+CS8803
+CS0106
+
+and probably half the remaining syntax errors.
+
+
+---
+
+Second Problem
+
+This test is incomplete and will not compile:
+
+[Fact]
+public async Task LMStudioService_WithMockedClient_ParsesSimulatedResponseText()
+{
+    string expectedOutput = "Mocked response";
+
+    HttpClient mockClient =
+        HttpClientMockFactory.CreateJsonClient(expectedOutput);
+
+    var testingService =
+        new LMStudioService("http://localhost:1234", "granite");
+
+    // Inject the mock client...
+
+    // Act
+}
+
+There is:
+
+no Assert
+
+no actual method call
+
+no return value usage
+
+
+So even after fixing the placement, this test is basically pseudocode.
+
+
+---
+
+Third Problem
+
+The bigger issue:
+
+Your test assumes this constructor exists:
+
+new LMStudioService(
+    "http://localhost:1234",
+    "granite"
+);
+
+but I have never seen your actual LMStudioService.cs.
+
+If your service currently looks like:
+
+public class LMStudioService
+{
+    private readonly HttpClient _client = new();
+
+    ...
+}
+
+then the test framework you pasted cannot work.
+
+The test requires dependency injection.
+
+You need something like:
+
+public class LMStudioService
+{
+    private readonly HttpClient _httpClient;
+
+    public LMStudioService(
+        string endpoint,
+        string model,
+        HttpClient? httpClient = null)
+    {
+        Endpoint = endpoint;
+        Model = model;
+
+        _httpClient = httpClient ?? new HttpClient();
+    }
+}
+
+or:
+
+public LMStudioService(
+    HttpClient httpClient,
+    string endpoint,
+    string model)
+{
+    _httpClient = httpClient;
+}
+
+Without that, the mock factory is useless because the test cannot inject the fake client.
+
+
+---
+
+Fourth Problem
+
+You appear to be testing classes that may not exist
+
+The test references:
+
+ToolExecutionEngine
+
+but your project tree shows:
+
+Core/
+    AgentLoop.cs
+    ToolExecutor.cs
+    ToolRouter.cs
+
+and I do NOT see:
+
+ToolExecutionEngine.cs
+
+in the structure you pasted.
+
+So either:
+
+A
+
+You actually have:
+
+ToolExecutionEngine.cs
+
+somewhere else.
+
+or
+
+B
+
+This test suite was generated from assumptions and is targeting a class that doesn't exist.
+
+Run:
+
+Get-ChildItem -Recurse *ToolExecutionEngine*
+
+If nothing appears:
+
+ToolExecutionEngineTests.cs
+
+is testing a phantom class.
+
+
+---
+
+Fifth Problem
+
+The build output is suspicious
+
+You ran:
+
+dotnet build
+
+from:
+
+MonsterTools/
+
+and it attempted to compile:
+
+MonsterTools.Tests/
+
+inside the same tree.
+
+That means one of these is true:
+
+Option 1
+
+Your solution contains:
+
+MonsterTools.sln
+    MonsterTools
+    MonsterTools.Tests
+
+which is correct.
+
+Option 2
+
+Someone accidentally included test files directly inside the production project.
+
+If your production csproj contains:
+
+<Compile Include="MonsterTools.Tests\**\*.cs" />
+
+or similar, that's wrong.
+
+Tests should be isolated.
+
+
+---
+
+What I would do before touching anything else
+
+1
+
+Temporarily remove the test project.
+
+dotnet build MonsterTools/MonsterTools.csproj
+
+If MonsterTools itself builds:
+
+Build succeeded
+
+then the MCP engine is fine and only the tests are broken.
+
+
+---
+
+2
+
+Verify these files actually exist:
+
+AgentLoop.cs
+ToolRouter.cs
+WorkerDispatcher.cs
+LMStudioService.cs
+Program.cs
+
+and compile.
+
+
+---
+
+3
+
+Ignore all test work until:
+
+VS Code Copilot
+↓
+Copilot Proxy
+↓
+POST /api/agent
+↓
+MonsterTools
+↓
+LM Studio
+↓
+Response
+
+works end-to-end.
+
+Right now your priority should be:
+
+Program.cs
+/api/agent endpoint
+LMStudioService
+ToolRouter
+WorkerDispatcher
+
+not xUnit.
+
+A broken test suite is annoying.
+
+A broken execution pipeline means nothing else matters.
+
+Based on everything you've posted so far, I'd estimate there's a good chance those 21 errors are entirely caused by ToolExecutionEngineTest.cs being malformed and possibly targeting classes that don't exist in your current MonsterTools architecture. The next thing I'd need to see to verify that is your actual:
+
+Program.cs
+
+LMStudioService.cs
+
+AgentLoop.cs
+
+WorkerDispatcher.cs
+
+ToolRouter.cs
+
+
+Those five files will tell us whether the MCP pipeline architecture is actually wired correctly or whether the test suite was generated against a different version of the project.
