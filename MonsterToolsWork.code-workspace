@@ -1,0 +1,34 @@
+{
+  "folders": [
+    {
+      "path": "."
+    },
+    {
+      "path": "MonsterTools"
+    },
+    {
+      "path": "MonsterTools/copilot-proxy-tools"
+    }
+  ],
+  "settings": {
+    "chat.utilityModel": "MonsterTools Proxy (customendpoint)",
+    "chat.utilitySmallModel": "MonsterTools Proxy (customendpoint)",
+    "inlineChat.defaultModel": "MonsterTools Proxy (customendpoint)",
+    "github.copilot.chat.implementAgent.model": "MonsterTools Proxy (customendpoint)",
+    "github.copilot.chat.codeGeneration.useInstructionFiles": true,
+    "github.copilot.chat.responsesApiContextManagement.enabled": true,
+    "github.copilot.chat.switchAgent.enabled": true,
+    "github.copilot.chat.githubMcpServer.enabled": true,
+    "github.copilot.chat.claudeAgent.enabled": false,
+    "github.copilot.chat.cloudAgent.enabled": false,
+    "dotnetAcquisitionExtension.existingDotnetPath": [
+
+    ]
+  }
+  {
+    "recommendations": [
+        "GitHub.copilot",
+        "GitHub.copilot-chat"
+    ]
+}
+}
