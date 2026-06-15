@@ -1,0 +1,28 @@
+body {
+    padding: 12px;
+    font-family: var(--vscode-font-family, monospace);
+    font-size: var(--vscode-font-size, 11px);
+    color: var(--vscode-sideBar-foreground, #ccc);
+    background-color: var(--vscode-sideBar-background);
+    margin: 0;
+}
+.matrix-layout { display: flex; flex-direction: column; height: 96vh; }
+h3 { font-size: 10px; letter-spacing: 1.5px; margin: 0 0 12px 0; color: var(--vscode-descriptionForeground); padding-bottom: 4px; border-bottom: 1px solid var(--vscode-widget-border); }
+.matrix-card { background: rgba(0, 0, 0, 0.25); border: 1px solid var(--vscode-widget-border, #3c3c3c); border-radius: 4px; padding: 10px; margin-bottom: 10px; }
+.card-header { font-size: 9px; font-weight: bold; color: var(--vscode-descriptionForeground); margin-bottom: 6px; }
+.badge-status { color: #000; background-color: #4af626; font-weight: bold; padding: 3px 6px; border-radius: 2px; display: inline-block; font-size: 9px; }
+.subtext-status { margin-top: 5px; color: var(--vscode-sideBar-foreground); font-style: italic; opacity: 0.8; }
+.data-row { display: flex; justify-content: space-between; margin: 4px 0; }
+.val-highlight { font-weight: bold; color: var(--vscode-textLink-foreground); }
+.meter-track { background: #141414; height: 5px; border-radius: 2.5px; margin-top: 5px; overflow: hidden; }
+.meter-fill { background: var(--vscode-textLink-foreground); height: 100%; transition: width 0.25s linear; }
+.terminal-view { background: #050505; height: 160px; overflow-y: auto; font-size: 10px; padding: 6px; border-radius: 2px; border: 1px solid var(--vscode-widget-border); }
+.line { margin-bottom: 3px; line-height: 1.2; }
+.line.sys { color: #777; }
+.line.worker { color: #38bdf8; }
+.line.llm { color: #fbbf24; }
+.console-box { margin-top: auto; }
+textarea { width: 100%; height: 54px; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--vscode-widget-border); color: #fff; padding: 6px; border-radius: 4px; resize: none; box-sizing: border-box; }
+.action-btn { width: 100%; padding: 7px; border: none; border-radius: 4px; font-weight: bold; margin-top: 5px; cursor: pointer; }
+.action-btn.execution { background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
+.action-btn.emergency { background: #3d1414; color: #ff453a; border: 1px solid #ff453a; }
