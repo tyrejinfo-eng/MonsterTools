@@ -1,0 +1,49 @@
+{
+  "name": "monster-ui",
+  "displayName": "MonsterTools Interface",
+  "description": "Direct workspace controller and telemetry interface for the MonsterTools local engine",
+  "version": "1.0.0",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "AI",
+    "Programming Language"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "monstertools-matrix",
+          "title": "MonsterTools Core",
+          "icon": "$(beaker)"
+        }
+      ]
+    },
+    "views": {
+      "monstertools-matrix": [
+        {
+          "type": "webview",
+          "id": "monstertools.sidebarView",
+          "name": "Workspace Gateway Control"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.90.0",
+    "@types/ws": "^8.5.10",
+    "typescript": "^5.4.0"
+  },
+  "dependencies": {
+    "ws": "^8.16.0"
+  }
+}
