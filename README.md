@@ -1,3 +1,7 @@
+<img width="1157" height="843" alt="Screenshot 2026-06-06 094628" src="https://github.com/user-attachments/assets/c1536e6d-ef34-4fe7-a7d0-6c753a3419c2" />
+
+
+
 Code Base and Structural Doc. The repository combines a high-performance C# backend core with a lightweight Node.js/TypeScript gateway. Together, they abstract low-compute model deficiencies by wrapping them in hard-coded runtime verification loops.The architecture, detailed in full in, utilizes a TypeScript gateway (copilot-proxy-tools/) to mimic OpenAI API calls and forward them to a C# .NET Core engine (MonsterTools/). This engine uses AgentLoop.cs to orchestrate ToolExecutor workers (BuildWorker.cs, Searchworkers.cs) to execute deterministic filesystem and build tasks based on local LLM outputs. Comprehensive Architecture Analysis, This repository is designed to act as a Model Context Protocol (MCP) bridging layer tailored for local software development workflows.The primary utility of MonsterTools is to empower low-compute, small footprint local models (such as ibm/granite-4-h-tiny) by offloading complex or multi-step tasks into local, deterministic tools. It coordinates communications between the VS Code Copilot UI, a TypeScript-based Compatibility Proxy, an Agent Loop Orchestration Core, and local tool executors.How the Multi-Layer Pipeline WorksThe execution lifecycle flow operates linearly across five distinct architectural layers:
 [Layer 1: VS Code Copilot UI] 
          ↓ (Standard OpenAI /v1/chat/completions schema payload)
