@@ -1,0 +1,35 @@
+name: Worker Issue
+description: Report or design a deterministic worker issue
+title: "[WORKER] "
+labels: ["worker"]
+body:
+  - type: input
+    id: worker
+    attributes:
+      label: Worker Name
+    validations:
+      required: true
+
+  - type: textarea
+    id: issue
+    attributes:
+      label: Issue Description
+    validations:
+      required: true
+
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected Deterministic Behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Execution Logs
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Task Context / Envelope Data

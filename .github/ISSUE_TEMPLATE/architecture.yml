@@ -1,0 +1,31 @@
+name: Architecture Discussion
+description: Discuss system design or structural changes
+title: "[ARCH] "
+labels: ["architecture"]
+body:
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: What part of the system is affected?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed Architecture Change
+    validations:
+      required: true
+
+  - type: textarea
+    id: reasoning
+    attributes:
+      label: Why this change is needed
+    validations:
+      required: true
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks / Trade-offs
